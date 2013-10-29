@@ -78,8 +78,7 @@ int main (int argc, char *argv[])
 
     ///// Create language model
 
-    neuralLM lm;
-    lm.read(myParam.model_file);
+    neuralLM lm(myParam.model_file);
     lm.set_normalization(normalization);
     lm.set_log_base(10);
     lm.set_cache(1048576);

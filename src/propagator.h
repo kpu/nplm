@@ -14,7 +14,7 @@ using Eigen::Dynamic;
 
 class propagator {
     int minibatch_size;
-    model *pnn;
+    const model *pnn;
 
 public:
     Node<Input_word_embeddings> input_layer_node;
@@ -27,7 +27,7 @@ public:
 public:
     propagator () : minibatch_size(0), pnn(0) { }
 
-    propagator (model &nn, int minibatch_size)
+    propagator (const model &nn, int minibatch_size)
       :
         pnn(&nn),
         input_layer_node(&nn.input_layer, minibatch_size),

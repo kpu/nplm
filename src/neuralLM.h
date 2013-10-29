@@ -9,6 +9,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <boost/lexical_cast.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include <Eigen/Dense>
 
@@ -22,13 +23,29 @@
 namespace nplm
 {
 
+class neuralLMShared {
+  public:
+    vocabulary input_vocab, output_vocab;
+    model nn;
+
+    explicit neuralLMShared(const std::string &filename) {
+      std::vector<std::string> input_words, output_words;
+      nn.read(filename, input_words, output_words);
+      input_vocab = vocabulary(input_words);
+      output_vocab = vocabulary(output_words);
+      // this is faster but takes more memory
+      //nn.premultiply();
+    }
+};
+
 class neuralLM 
 {
+    // Big stuff shared across instances.
+    boost::shared_ptr<neuralLMShared> shared;
+
     bool normalization;
     char map_digits;
 
-    vocabulary input_vocab, output_vocab;
-    model nn;
     propagator prop;
 
     int ngram_size;
@@ -36,7 +53,7 @@ class neuralLM
 
     double weight;
 
-private:
+
     std::size_t cache_size;
     Eigen::Matrix<int,Dynamic,Dynamic> cache_keys;
     std::vector<double> cache_values;
@@ -46,24 +63,18 @@ private:
     int start, null;
 
 public:
-    neuralLM() 
-      : ngram_size(1), 
+    neuralLM(const std::string &filename) 
+      : shared(new neuralLMShared(filename)),
+        ngram_size(shared->nn.ngram_size), 
 	normalization(false),
 	weight(1.),
 	map_digits(0),
 	width(1),
-	prop(nn, 1),
-        cache_size(0)
-    { 
-    }
-
-    void set_normalization(bool value) { normalization = value; }
-    void set_log_base(double value) { weight = 1./std::log(value); }
-    void set_map_digits(char value) { map_digits = value; }
-
-    // This must be called if the underlying model is resized.
-    void resize() {
-        ngram_size = nn.ngram_size;
+	prop(shared->nn, 1),
+        cache_size(0),
+        start(shared->input_vocab.lookup_word("<s>")),
+        null(shared->input_vocab.lookup_word("<null>"))
+    {
 	ngram.setZero(ngram_size);
 	if (cache_size)
 	{
@@ -73,25 +84,17 @@ public:
 	prop.resize();
     }
 
+    void set_normalization(bool value) { normalization = value; }
+    void set_log_base(double value) { weight = 1./std::log(value); }
+    void set_map_digits(char value) { map_digits = value; }
+
     void set_width(int width)
     {
         this->width = width;
 	prop.resize(width);
     }
 
-    void set_input_vocabulary(const vocabulary &vocab)
-    {
-        this->input_vocab = vocab;
-        start = input_vocab.lookup_word("<s>");
-        null = input_vocab.lookup_word("<null>");
-    }
-
-    void set_output_vocabulary(const vocabulary &vocab)
-    {
-        this->output_vocab = vocab;
-    }
-
-    const vocabulary &get_vocabulary() const { return this->input_vocab; }
+    const vocabulary &get_vocabulary() const { return shared->input_vocab; }
 
     int lookup_input_word(const std::string &word) const
     {
@@ -103,9 +106,9 @@ public:
 		    for (; i<word.length(); i++)
 		        if (isdigit(word[i]))
 			    mapped_word[i] = map_digits;
-		    return input_vocab.lookup_word(mapped_word);
+		    return shared->input_vocab.lookup_word(mapped_word);
 		}
-        return input_vocab.lookup_word(word);
+        return shared->input_vocab.lookup_word(word);
     }
 
     int lookup_word(const std::string &word) const
@@ -123,9 +126,9 @@ public:
 		    for (; i<word.length(); i++)
 		        if (isdigit(word[i]))
 			    mapped_word[i] = map_digits;
-		    return output_vocab.lookup_word(mapped_word);
+		    return shared->output_vocab.lookup_word(mapped_word);
 		}
-	return output_vocab.lookup_word(word);
+	return shared->output_vocab.lookup_word(word);
     }
 
     template <typename Derived>
@@ -166,7 +169,7 @@ public:
 	start_timer(3);
 	if (normalization)
 	{
-	    Eigen::Matrix<double,Eigen::Dynamic,1> scores(output_vocab.size());
+	    Eigen::Matrix<double,Eigen::Dynamic,1> scores(shared->output_vocab.size());
 	    prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
 	    double logz = logsum(scores.col(0));
 	    log_prob = weight * (scores(output, 0) - logz);
@@ -205,13 +208,13 @@ public:
 
 	if (normalization)
 	{
-	    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> scores(output_vocab.size(), ngram.cols());
+	    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> scores(shared->output_vocab.size(), ngram.cols());
 	    prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
 
 	    // And softmax and loss
-	    Matrix<double,Dynamic,Dynamic> output_probs(nn.output_vocab_size, ngram.cols());
+	    Matrix<double,Dynamic,Dynamic> output_probs(shared->nn.output_vocab_size, ngram.cols());
 	    double minibatch_log_likelihood;
-	    SoftmaxLogLoss().fProp(scores.leftCols(ngram.cols()), ngram.row(nn.ngram_size-1), output_probs, minibatch_log_likelihood);
+	    SoftmaxLogLoss().fProp(scores.leftCols(ngram.cols()), ngram.row(shared->nn.ngram_size-1), output_probs, minibatch_log_likelihood);
 	    for (int j=0; j<ngram.cols(); j++)
 	    {
 	        int output = ngram(ngram_size-1, j);
@@ -253,18 +256,6 @@ public:
     }
 
     int get_order() const { return ngram_size; }
-
-    void read(const std::string &filename)
-    {
-        std::vector<std::string> input_words;
-        std::vector<std::string> output_words;
-        nn.read(filename, input_words, output_words);
-        set_input_vocabulary(vocabulary(input_words));
-        set_output_vocabulary(vocabulary(output_words));
-        resize();
-	// this is faster but takes more memory
-        //nn.premultiply();
-    }
 
     void set_cache(std::size_t cache_size)
     {

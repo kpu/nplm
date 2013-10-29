@@ -11,7 +11,7 @@ namespace nplm
 template <class X>
 class Node {
     public:
-        X * param; //what parameter is this
+        const X * param; //what parameter is this
         //vector <void *> children;
         //vector <void *> parents;
 	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> fProp_matrix;
@@ -21,7 +21,7 @@ class Node {
     public:
         Node() : param(NULL), minibatch_size(0) { }
 
-        Node(X *input_param, int minibatch_size)
+        Node(const X *input_param, int minibatch_size)
 	  : param(input_param),
 	    minibatch_size(minibatch_size)
         {
