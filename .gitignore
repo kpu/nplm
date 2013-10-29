@@ -1,0 +1,10 @@
+python/nplm.pyc
+src/*.o
+src/*.a
+src/shared/*.o
+src/neuralLM.so
+src/prepareNeuralLM
+src/prepareNeuralTM
+src/testNeuralLM
+src/testNeuralNetwork
+src/trainNeuralNetwork
