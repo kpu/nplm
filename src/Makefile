@@ -19,14 +19,14 @@ OS:=$(shell uname -s)
 ### Required libraries. You must install these prior to building.
 
 # Set this to the root directory of Boost (should have a subdirectory named boost):
-BOOST=/usr/usc/boost/1.51.0
+BOOST=/usr
 #BOOST=/usr
 #BOOST=/opt/local
 # Where to find Boost header files
 BOOST_INC=$(BOOST)/include
 
 # Set this to the root directory of Eigen (should have a subdirectory named Eigen):
-EIGEN=../3rdparty/eigen
+EIGEN=/usr/include/eigen3
 
 ### Optional libraries.
 
@@ -34,7 +34,7 @@ EIGEN=../3rdparty/eigen
 OMP=1
 
 # To use the MKL library, uncomment the line below and set it to the MKL root:
-MKL=/usr/usc/intel/12.1.1/mkl
+#MKL=/usr/usc/intel/12.1.1/mkl
 
 # For Python bindings, set the following and run 'make python/nplm.so'.
 PYTHON_VERSION=2.7
