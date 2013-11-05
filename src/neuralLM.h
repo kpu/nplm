@@ -131,6 +131,11 @@ public:
 	return shared->output_vocab.lookup_word(word);
     }
 
+    Eigen::Matrix<int,Eigen::Dynamic,1> &staging_ngram() { return ngram; }
+    double lookup_from_staging() {
+      return lookup_ngram(ngram);
+    }
+
     template <typename Derived>
     double lookup_ngram(const Eigen::MatrixBase<Derived> &ngram)
     {
