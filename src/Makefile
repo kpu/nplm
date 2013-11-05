@@ -122,7 +122,7 @@ RANLIB=ranlib
 # Rules
 
 BINS=trainNeuralNetwork testNeuralNetwork prepareNeuralLM testNeuralLM prepareNeuralTM
-LIBS=neuralLM.a neuralLM.so
+LIBS=libneuralLM.a libneuralLM.so
 OBJS=util.o model.o
 
 all: $(BINS) $(LIBS)
@@ -157,12 +157,12 @@ testNeuralLM: testNeuralLM.o $(OBJS)
 prepareNeuralTM: prepareNeuralTM.o $(OBJS)
 	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@
 
-neuralLM.a: neuralLM.o $(OBJS)
+libneuralLM.a: neuralLM.o $(OBJS)
 	rm -f $@
 	$(AR) rv $@ $^
 	$(RANLIB) $@
 
-neuralLM.so: $(addprefix shared/,neuralLM.o $(OBJS))
+libneuralLM.so: $(addprefix shared/,neuralLM.o $(OBJS))
 	$(CXX) -shared $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@
 
 python/nplm.cpp: python/nplm.pyx
