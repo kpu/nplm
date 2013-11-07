@@ -30,12 +30,13 @@ public:
     propagator (const model &nn, int minibatch_size)
       :
         pnn(&nn),
-        input_layer_node(&nn.input_layer, minibatch_size),
-	first_hidden_linear_node(&nn.first_hidden_linear, minibatch_size),
-	first_hidden_activation_node(&nn.first_hidden_activation, minibatch_size),
-        second_hidden_linear_node(&nn.second_hidden_linear, minibatch_size),
-	second_hidden_activation_node(&nn.second_hidden_activation, minibatch_size),
-	output_layer_node(&nn.output_layer, minibatch_size),
+        // These are const for purposes of querying.  The issue is that it's also used non-const for purposes of training, so X* only takes mutable classes.
+        input_layer_node(const_cast<Input_word_embeddings*>(&nn.input_layer), minibatch_size),
+	first_hidden_linear_node(const_cast<Linear_layer*>(&nn.first_hidden_linear), minibatch_size),
+	first_hidden_activation_node(const_cast<Activation_function*>(&nn.first_hidden_activation), minibatch_size),
+        second_hidden_linear_node(const_cast<Linear_layer*>(&nn.second_hidden_linear), minibatch_size),
+	second_hidden_activation_node(const_cast<Activation_function*>(&nn.second_hidden_activation), minibatch_size),
+	output_layer_node(const_cast<Output_word_embeddings*>(&nn.output_layer), minibatch_size),
 	minibatch_size(minibatch_size)
     {
     }
